@@ -294,6 +294,36 @@ void PylonCameraImpl<CameraTraitT>::enableContinuousAutoGain()
     }
 }
 
+template <typename CameraTraitT> 
+std::string PylonCameraImpl<CameraTraitT>::enablePTP(const bool& value)
+{
+    try
+    {
+        if (GenApi::IsAvailable(cam_->GevIEEE1588))
+        {
+            cam_->GevIEEE1588.SetValue(value);
+            return "done";
+        }
+        else
+        {
+            if (GenApi::IsAvailable(cam_->PtpEnable))
+            {
+                cam_->PtpEnable.SetValue(value);
+                return "done";
+            }
+            else
+            {
+                ROS_ERROR_STREAM("Error while trying to enable/disable PTP. The connected camera does not support this feature.");
+                return "The connected camera does not support this feature";
+            }
+        }
+    }
+    catch (const GenICam::GenericException &e)
+    {
+        ROS_ERROR_STREAM("An exception while enabling/disabling PTP occurred:" << e.GetDescription());
+        return e.GetDescription();
+    }
+}
 template <typename CameraTraitT>
 void PylonCameraImpl<CameraTraitT>::disableAllRunningAutoBrightessFunctions()
 {
@@ -344,6 +374,11 @@ bool PylonCameraImpl<CameraTraitT>::startGrabbing(const PylonCameraParameter& pa
         }
 
         available_image_encodings_ = detectAvailableImageEncodings(true); // Basler format
+
+        if(parameters.use_ptp_)
+        {
+            enablePTP(parameters.use_ptp_);
+        }
 
         // Check if the image can be encoded with the parameter defined value
         if ( setImageEncoding(parameters.imageEncoding()).find("done") == std::string::npos )
@@ -396,7 +431,7 @@ bool PylonCameraImpl<CameraTraitT>::startGrabbing(const PylonCameraParameter& pa
 
 // Grab a picture as std::vector of 8bits objects
 template <typename CameraTrait>
-bool PylonCameraImpl<CameraTrait>::grab(std::vector<uint8_t>& image)
+bool PylonCameraImpl<CameraTrait>::grab(std::vector<uint8_t>& image, uint64_t& timestamp)
 { 
     Pylon::CGrabResultPtr ptr_grab_result;
     if ( !grab(ptr_grab_result) )
@@ -405,6 +440,7 @@ bool PylonCameraImpl<CameraTrait>::grab(std::vector<uint8_t>& image)
         return false;
     }
     const uint8_t *pImageBuffer = reinterpret_cast<uint8_t*>(ptr_grab_result->GetBuffer());
+    timestamp = ptr_grab_result->GetTimeStamp();
 
     // ------------------------------------------------------------------------
     // Bit shifting
@@ -432,7 +468,7 @@ bool PylonCameraImpl<CameraTrait>::grab(std::vector<uint8_t>& image)
 
 // Grab a picture as pointer to 8bit array
 template <typename CameraTrait>
-bool PylonCameraImpl<CameraTrait>::grab(uint8_t* image)
+bool PylonCameraImpl<CameraTrait>::grab(uint8_t* image,uint64_t& timestamp)
 {   
 
     // If camera is not grabbing, don't grab
@@ -446,6 +482,7 @@ bool PylonCameraImpl<CameraTrait>::grab(uint8_t* image)
         ROS_ERROR("Error: Grab was not successful");
         return false;
     }
+    timestamp = ptr_grab_result->GetTimeStamp();
 
     // ------------------------------------------------------------------------
     // Bit shifting

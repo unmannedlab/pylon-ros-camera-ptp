@@ -67,9 +67,9 @@ public:
 
     virtual bool startGrabbing(const PylonCameraParameter& parameters);
 
-    virtual bool grab(std::vector<uint8_t>& image);
+    virtual bool grab(std::vector<uint8_t>& image, uint64_t& timestamp);
 
-    virtual bool grab(uint8_t* image);
+    virtual bool grab(uint8_t* image, uint64_t& timestamp);
 
     virtual bool setShutterMode(const pylon_camera::SHUTTER_MODE& mode);
 
@@ -144,6 +144,8 @@ public:
     virtual void enableContinuousAutoExposure();
 
     virtual void enableContinuousAutoGain();
+
+    virtual std::string enablePTP(const bool& value); 
 
     virtual std::string typeName() const;
 

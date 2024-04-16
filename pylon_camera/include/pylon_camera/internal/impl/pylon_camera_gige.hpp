@@ -146,6 +146,30 @@ bool PylonGigECamera::setAutoflash(const std::map<int, bool> flash_on_lines)
     return true;
 }
 
+
+template <> 
+std::string PylonGigECamera::enablePTP(const bool& value)
+{
+    try
+    {
+        if (GenApi::IsAvailable(cam_->GevIEEE1588))
+        {
+            cam_->GevIEEE1588.SetValue(value);
+            return "done";
+        }
+        else
+        {
+            ROS_ERROR_STREAM("Error while trying to enable/disable PTP. The connected camera does not support this feature.");
+            return "The connected camera does not support this feature";
+        }
+    }
+    catch (const GenICam::GenericException &e)
+    {
+        ROS_ERROR_STREAM("An exception while enabling/disabling PTP occurred: " << e.GetDescription());
+        return e.GetDescription();
+    }
+}
+
 template <>
 bool PylonGigECamera::applyCamSpecificStartupSettings(const PylonCameraParameter& parameters)
 {
@@ -261,7 +285,6 @@ bool PylonGigECamera::applyCamSpecificStartupSettings(const PylonCameraParameter
 
             // frame transmission delay
             cam_->GevSCFTD.SetValue(parameters.frame_transmission_delay_);
-            
             ROS_WARN("Default User Setting Loaded");
         }
         else if (parameters.startup_user_set_ == "UserSet1")

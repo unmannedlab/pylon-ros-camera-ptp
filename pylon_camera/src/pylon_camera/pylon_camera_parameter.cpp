@@ -60,6 +60,7 @@ PylonCameraParameter::PylonCameraParameter() :
         brightness_continuous_(false),
         exposure_auto_(true),
         gain_auto_(true),
+        use_ptp_(false),
         // #########################
         exposure_search_timeout_(5.),
         auto_exp_upper_lim_(0.0),
@@ -303,7 +304,10 @@ void PylonCameraParameter::readFromRosParameterServer(const ros::NodeHandle& nh)
     {
         nh.getParam("grab_strategy", grab_strategy_);
     }
-
+    if (nh.hasParam("use_ptp"))
+    {
+        nh.getParam("use_ptp", use_ptp_);
+    }
     nh.param<bool>("auto_flash", auto_flash_, false);
     nh.param<bool>("auto_flash_line_2", auto_flash_line_2_, true);
     nh.param<bool>("auto_flash_line_3", auto_flash_line_3_, true);

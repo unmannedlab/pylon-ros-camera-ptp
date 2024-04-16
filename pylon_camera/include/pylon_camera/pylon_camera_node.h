@@ -926,6 +926,21 @@ protected:
     std::string gammaEnable(const int& enable);
 
     /**
+     * Service callback for enable/disable the camera ptp
+     * @param req request
+     * @param res response
+     * @return true on success
+     */
+    bool enablePTPCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res);    
+
+    /**
+     * enable/disable the camera PTP (GigE Camera only)
+     * @param enable
+     * @return error message if an error occurred or done message otherwise.
+     */
+    std::string enablePTP(const bool& enable);
+
+    /**
      * Service callback for setting the camera grab timeout in ms
      * @param req request
      * @param res response
@@ -1183,6 +1198,7 @@ protected:
     ros::ServiceServer set_max_transfer_size_srv_; 
     ros::ServiceServer set_gamma_selector_srv; 
     ros::ServiceServer gamma_enable_srv;
+    ros::ServiceServer enable_ptp_srv;
     ros::ServiceServer set_grab_timeout_srv;
     ros::ServiceServer set_trigger_timeout_srv;
     ros::ServiceServer set_white_balance_srv;

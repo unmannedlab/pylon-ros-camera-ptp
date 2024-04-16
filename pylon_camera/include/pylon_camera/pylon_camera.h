@@ -114,7 +114,7 @@ public:
      * @param image reference to the output image.
      * @return true if the image was grabbed successfully.
      */
-    virtual bool grab(std::vector<uint8_t>& image) = 0;
+    virtual bool grab(std::vector<uint8_t>& image,uint64_t& timestamp) = 0;
 
     /**
      * Grab a camera frame and copy the result into image
@@ -122,7 +122,7 @@ public:
      *              Caution: Make sure the buffer is initialized correctly!
      * @return true if the image was grabbed successfully.
      */
-    virtual bool grab(uint8_t* image) = 0;
+    virtual bool grab(uint8_t* image, uint64_t& timestamp) = 0;
 
     /**
      * @brief sets shutter mode for the camera (rolling or global_reset)
@@ -373,6 +373,10 @@ public:
      */
     virtual void enableContinuousAutoGain() = 0;
 
+    /**
+     * Enables the PTP
+     */
+    virtual std::string enablePTP(const bool& value)  = 0;
     /**
      * Get the camera type. Currently supported cameras are USB, DART and GigE
      * @return camera type as string

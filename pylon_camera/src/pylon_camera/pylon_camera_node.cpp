@@ -180,6 +180,9 @@ PylonCameraNode::PylonCameraNode()
       gamma_enable_srv(nh_.advertiseService("gamma_enable",
                                              &PylonCameraNode::gammaEnableCallback,
                                              this)),
+      enable_ptp_srv(nh_.advertiseService("enable_ptp",
+                                             &PylonCameraNode::enablePTPCallback,
+                                             this)),
       set_grab_timeout_srv(nh_.advertiseService("set_grab_timeout",
                                              &PylonCameraNode::setGrabTimeoutCallback,
                                              this)),
@@ -791,11 +794,17 @@ bool PylonCameraNode::grabImage()
     boost::lock_guard<boost::recursive_mutex> lock(grab_mutex_);
     // Store current time before the image is transmitted for a more accurate grab time estimation
     ros::Time grab_time = ros::Time::now();
-    if ( !pylon_camera_->grab(img_raw_msg_.data) )
+    uint64_t grab_time_ns = grab_time.toNSec();
+    if ( !pylon_camera_->grab(img_raw_msg_.data,grab_time_ns) )
     {
         return false;
     }
-    img_raw_msg_.header.stamp = grab_time; 
+    if ( pylon_camera_parameter_set_.use_ptp_ )
+    {
+        grab_time = ros::Time().fromNSec(grab_time_ns);
+        
+    }
+    img_raw_msg_.header.stamp = grab_time;
     return true;
 }
 
@@ -1019,15 +1028,20 @@ camera_control_msgs::GrabImagesResult PylonCameraNode::grabImagesRaw(
         img.step = img.width * pylon_camera_->imagePixelDepth();
         
         // Store current time before the image is transmitted for a more accurate grab time estimation
-        img.header.stamp = ros::Time::now();
+        ros::Time grab_time = ros::Time::now();
+        uint64_t grab_time_ns = grab_time.toNSec();
         img.header.frame_id = cameraFrame();
 
-        if ( !pylon_camera_->grab(img.data) )
+        if ( !pylon_camera_->grab(img.data,grab_time_ns) )
         {
             result.success = false;
             break;
         }
-
+        if ( pylon_camera_parameter_set_.use_ptp_ )
+        {
+            grab_time = ros::Time().fromNSec(grab_time_ns);
+        }
+        img.header.stamp = grab_time;
         feedback.curr_nr_images_taken = i+1;
 
         if ( action_server != nullptr )
@@ -2995,6 +3009,7 @@ bool PylonCameraNode::gammaEnableCallback(std_srvs::SetBool::Request &req, std_s
     return true;
 }
 
+
 std::string PylonCameraNode::gammaEnable(const int& enable)
 {  
     boost::lock_guard<boost::recursive_mutex> lock(grab_mutex_);
@@ -3004,6 +3019,35 @@ std::string PylonCameraNode::gammaEnable(const int& enable)
         return "pylon camera is not ready!";
     }
     return pylon_camera_->gammaEnable(enable) ;
+}
+
+bool PylonCameraNode::enablePTPCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res)
+{
+  res.message = enablePTP(req.data);
+  if ((res.message.find("done") != std::string::npos) != 0)
+  {
+    res.success = true;
+  }
+  else
+  {
+    res.success = false;
+    if (res.message == "Node is not writable")
+    {
+        res.message = "Using this feature require stop image grabbing";
+    }
+  }
+  return true;
+}
+
+std::string PylonCameraNode::enablePTP(const bool& enable)
+{
+  boost::lock_guard<boost::recursive_mutex> lock(grab_mutex_);
+  if ( !pylon_camera_->isReady() )
+  {
+    ROS_WARN("Error in enablePTP(): pylon_camera_ is not ready!");
+    return "pylon camera is not ready!";
+  }
+  return pylon_camera_->enablePTP(enable);
 }
 
 
